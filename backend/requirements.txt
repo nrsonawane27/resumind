@@ -1,0 +1,9 @@
+﻿fastapi
+uvicorn[standard]
+python-multipart
+pdfminer.six
+python-docx
+reportlab
+pydantic
+python-dotenv
+supabase

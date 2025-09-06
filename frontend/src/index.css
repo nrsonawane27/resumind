@@ -1,0 +1,15 @@
+/* Tailwind v4: import once */
+@import "tailwindcss";
+
+/* Your custom theme tokens (replaces tailwind.config.js extend) */
+@theme {
+  --color-sidebarTop:  #3b3bb1;
+  --color-sidebarBot:  #7b2ea6;
+  --color-brandBlue:   #2563eb;
+  --color-brandText:   #0f172a;
+  --shadow-card: 0 8px 30px rgba(0,0,0,.08);
+}
+
+/* App base */
+html, body, #root { height: 100%; }
+body { @apply bg-white text-brandText antialiased; }
