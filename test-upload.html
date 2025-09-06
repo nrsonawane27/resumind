@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Upload Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button { padding: 10px 20px; margin: 10px 0; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        input[type="file"] { margin: 10px 0; }
+        #results { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Resume Upload Test</h1>
+        
+        <div class="test-section">
+            <h3>1. Backend Health Check</h3>
+            <button onclick="testBackend()">Test Backend Connection</button>
+            <div id="backend-status"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Resume Upload Test</h3>
+            <input type="file" id="fileInput" accept=".pdf,.docx,.txt" />
+            <button onclick="testUpload()">Upload Resume</button>
+            <div id="upload-status"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Configuration</h3>
+            <label>Backend URL: <input type="text" id="backendUrl" placeholder="https://your-backend-url.onrender.com" style="width: 300px;" /></label>
+            <button onclick="updateBackendUrl()">Update URL</button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        let currentBackendUrl = 'https://your-backend-url.onrender.com';
+
+        function updateBackendUrl() {
+            const url = document.getElementById('backendUrl').value;
+            if (url) {
+                currentBackendUrl = url;
+                document.getElementById('results').innerHTML += `<div class="info">✅ Backend URL updated to: ${currentBackendUrl}</div>`;
+            }
+        }
+
+        async function testBackend() {
+            const statusDiv = document.getElementById('backend-status');
+            statusDiv.innerHTML = '<div class="info">🔄 Testing backend connection...</div>';
+
+            try {
+                const response = await fetch(`${currentBackendUrl}/health`);
+                const data = await response.json();
+                
+                if (response.ok && data.ok) {
+                    statusDiv.innerHTML = `<div class="success">✅ Backend is running! Response: ${JSON.stringify(data)}</div>`;
+                } else {
+                    statusDiv.innerHTML = `<div class="error">❌ Backend responded with error: ${JSON.stringify(data)}</div>`;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">❌ Backend connection failed: ${error.message}</div>`;
+                console.error('Backend test error:', error);
+            }
+        }
+
+        async function testUpload() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadStatusDiv = document.getElementById('upload-status');
+            
+            if (!fileInput.files[0]) {
+                uploadStatusDiv.innerHTML = '<div class="error">❌ Please select a file first</div>';
+                return;
+            }
+
+            const file = fileInput.files[0];
+            uploadStatusDiv.innerHTML = `<div class="info">🔄 Uploading ${file.name} (${file.size} bytes)...</div>`;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${currentBackendUrl}/api/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    uploadStatusDiv.innerHTML = `<div class="success">✅ Upload successful! Resume ID: ${data.resume_id}</div>`;
+                    document.getElementById('results').innerHTML += `<div class="success">✅ Upload test passed: ${JSON.stringify(data)}</div>`;
+                } else {
+                    uploadStatusDiv.innerHTML = `<div class="error">❌ Upload failed: ${JSON.stringify(data)}</div>`;
+                    document.getElementById('results').innerHTML += `<div class="error">❌ Upload test failed: ${JSON.stringify(data)}</div>`;
+                }
+            } catch (error) {
+                uploadStatusDiv.innerHTML = `<div class="error">❌ Upload error: ${error.message}</div>`;
+                document.getElementById('results').innerHTML += `<div class="error">❌ Upload test error: ${error.message}</div>`;
+                console.error('Upload test error:', error);
+            }
+        }
+
+        // Auto-test backend on page load
+        window.onload = function() {
+            document.getElementById('backendUrl').value = currentBackendUrl;
+        };
+    </script>
+</body>
+</html>
