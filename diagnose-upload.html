@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Upload Diagnostic Tool</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fafafa; }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .warning { color: #ffc107; font-weight: bold; }
+        .info { color: #17a2b8; }
+        button { padding: 12px 24px; margin: 8px 0; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        input[type="text"], input[type="file"] { padding: 8px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px; width: 100%; max-width: 400px; }
+        .log { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 15px; margin: 10px 0; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .status.success { background: #d4edda; border: 1px solid #c3e6cb; }
+        .status.error { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .status.warning { background: #fff3cd; border: 1px solid #ffeaa7; }
+        .status.info { background: #d1ecf1; border: 1px solid #bee5eb; }
+        .step { margin: 15px 0; padding: 15px; border-left: 4px solid #007bff; background: #f8f9fa; }
+        .step h4 { margin: 0 0 10px 0; color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Resume Upload Diagnostic Tool</h1>
+        <p>This tool will help diagnose and fix your resume upload issues.</p>
+
+        <div class="step">
+            <h4>Step 1: Configure Backend URL</h4>
+            <label>Backend URL: <input type="text" id="backendUrl" placeholder="https://your-backend-url.onrender.com" /></label>
+            <button onclick="updateBackendUrl()">Update URL</button>
+            <div id="url-status"></div>
+        </div>
+
+        <div class="step">
+            <h4>Step 2: Test Backend Connection</h4>
+            <button onclick="testBackendHealth()" id="healthBtn">Test Backend Health</button>
+            <div id="health-status"></div>
+        </div>
+
+        <div class="step">
+            <h4>Step 3: Test CORS Configuration</h4>
+            <button onclick="testCORS()" id="corsBtn">Test CORS</button>
+            <div id="cors-status"></div>
+        </div>
+
+        <div class="step">
+            <h4>Step 4: Test File Upload</h4>
+            <input type="file" id="fileInput" accept=".pdf,.docx,.txt" />
+            <button onclick="testFileUpload()" id="uploadBtn">Test Upload</button>
+            <div id="upload-status"></div>
+        </div>
+
+        <div class="step">
+            <h4>Step 5: Network Analysis</h4>
+            <button onclick="analyzeNetwork()" id="networkBtn">Analyze Network</button>
+            <div id="network-status"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Diagnostic Log</h3>
+            <div id="log" class="log"></div>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🛠️ Quick Fixes</h3>
+            <div id="fixes"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentBackendUrl = '';
+        let logEntries = [];
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = `[${timestamp}] ${message}`;
+            logEntries.push({ message: entry, type });
+            
+            const logDiv = document.getElementById('log');
+            const color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : type === 'warning' ? '#ffc107' : '#17a2b8';
+            logDiv.innerHTML += `<div style="color: ${color};">${entry}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            logEntries = [];
+            document.getElementById('log').innerHTML = '';
+        }
+
+        function updateBackendUrl() {
+            const url = document.getElementById('backendUrl').value.trim();
+            if (!url) {
+                log('❌ Please enter a backend URL', 'error');
+                return;
+            }
+            
+            currentBackendUrl = url;
+            log(`✅ Backend URL updated to: ${currentBackendUrl}`, 'success');
+            document.getElementById('url-status').innerHTML = '<div class="status success">✅ URL updated successfully</div>';
+        }
+
+        async function testBackendHealth() {
+            if (!currentBackendUrl) {
+                log('❌ Please set backend URL first', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('healthBtn');
+            btn.disabled = true;
+            btn.textContent = 'Testing...';
+
+            log(`🔄 Testing backend health at: ${currentBackendUrl}/health`, 'info');
+
+            try {
+                const response = await fetch(`${currentBackendUrl}/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.ok) {
+                    log('✅ Backend is healthy and responding', 'success');
+                    document.getElementById('health-status').innerHTML = '<div class="status success">✅ Backend is running and healthy</div>';
+                } else {
+                    log(`❌ Backend responded with error: ${JSON.stringify(data)}`, 'error');
+                    document.getElementById('health-status').innerHTML = '<div class="status error">❌ Backend error response</div>';
+                }
+            } catch (error) {
+                log(`❌ Backend connection failed: ${error.message}`, 'error');
+                document.getElementById('health-status').innerHTML = '<div class="status error">❌ Cannot connect to backend</div>';
+                
+                // Suggest fixes
+                suggestFixes('backend_connection');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Test Backend Health';
+            }
+        }
+
+        async function testCORS() {
+            if (!currentBackendUrl) {
+                log('❌ Please set backend URL first', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('corsBtn');
+            btn.disabled = true;
+            btn.textContent = 'Testing CORS...';
+
+            log('🔄 Testing CORS configuration...', 'info');
+
+            try {
+                const response = await fetch(`${currentBackendUrl}/api/upload`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': window.location.origin,
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type',
+                    }
+                });
+
+                if (response.ok) {
+                    log('✅ CORS preflight request successful', 'success');
+                    document.getElementById('cors-status').innerHTML = '<div class="status success">✅ CORS is configured correctly</div>';
+                } else {
+                    log(`❌ CORS preflight failed: ${response.status}`, 'error');
+                    document.getElementById('cors-status').innerHTML = '<div class="status error">❌ CORS configuration issue</div>';
+                    suggestFixes('cors');
+                }
+            } catch (error) {
+                log(`❌ CORS test failed: ${error.message}`, 'error');
+                document.getElementById('cors-status').innerHTML = '<div class="status error">❌ CORS test failed</div>';
+                suggestFixes('cors');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Test CORS';
+            }
+        }
+
+        async function testFileUpload() {
+            if (!currentBackendUrl) {
+                log('❌ Please set backend URL first', 'error');
+                return;
+            }
+
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files[0]) {
+                log('❌ Please select a file first', 'error');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const btn = document.getElementById('uploadBtn');
+            btn.disabled = true;
+            btn.textContent = 'Uploading...';
+
+            log(`🔄 Testing file upload: ${file.name} (${file.size} bytes, ${file.type})`, 'info');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${currentBackendUrl}/api/upload`, {
+                    method: 'POST',
+                    body: formData,
+                    // Don't set Content-Type - let browser set it with boundary
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Upload successful! Resume ID: ${data.resume_id}`, 'success');
+                    document.getElementById('upload-status').innerHTML = '<div class="status success">✅ File upload successful</div>';
+                } else {
+                    log(`❌ Upload failed: ${response.status} - ${JSON.stringify(data)}`, 'error');
+                    document.getElementById('upload-status').innerHTML = '<div class="status error">❌ Upload failed</div>';
+                    suggestFixes('upload_failed');
+                }
+            } catch (error) {
+                log(`❌ Upload error: ${error.message}`, 'error');
+                document.getElementById('upload-status').innerHTML = '<div class="status error">❌ Upload error occurred</div>';
+                suggestFixes('upload_error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Test Upload';
+            }
+        }
+
+        async function analyzeNetwork() {
+            if (!currentBackendUrl) {
+                log('❌ Please set backend URL first', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('networkBtn');
+            btn.disabled = true;
+            btn.textContent = 'Analyzing...';
+
+            log('🔄 Analyzing network connectivity...', 'info');
+
+            try {
+                // Test DNS resolution
+                const url = new URL(currentBackendUrl);
+                log(`🔍 Testing DNS resolution for: ${url.hostname}`, 'info');
+
+                // Test basic connectivity
+                const response = await fetch(`${currentBackendUrl}/health`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    cache: 'no-cache'
+                });
+
+                if (response.ok) {
+                    log('✅ Network connectivity is working', 'success');
+                    document.getElementById('network-status').innerHTML = '<div class="status success">✅ Network is working properly</div>';
+                } else {
+                    log(`⚠️ Network responded with status: ${response.status}`, 'warning');
+                    document.getElementById('network-status').innerHTML = '<div class="status warning">⚠️ Network issues detected</div>';
+                    suggestFixes('network');
+                }
+            } catch (error) {
+                log(`❌ Network analysis failed: ${error.message}`, 'error');
+                document.getElementById('network-status').innerHTML = '<div class="status error">❌ Network connectivity issues</div>';
+                suggestFixes('network');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Analyze Network';
+            }
+        }
+
+        function suggestFixes(issueType) {
+            const fixesDiv = document.getElementById('fixes');
+            let fixes = '';
+
+            switch (issueType) {
+                case 'backend_connection':
+                    fixes = `
+                        <h4>🔧 Backend Connection Issues:</h4>
+                        <ul>
+                            <li>Check if your backend is deployed and running</li>
+                            <li>Verify the backend URL is correct</li>
+                            <li>Check deployment logs in your platform dashboard</li>
+                            <li>Ensure environment variables are set correctly</li>
+                        </ul>
+                    `;
+                    break;
+                case 'cors':
+                    fixes = `
+                        <h4>🔧 CORS Issues:</h4>
+                        <ul>
+                            <li>Update CORS_ORIGINS in backend with your frontend URL</li>
+                            <li>Restart your backend service</li>
+                            <li>Check if CORS middleware is properly configured</li>
+                        </ul>
+                    `;
+                    break;
+                case 'upload_failed':
+                case 'upload_error':
+                    fixes = `
+                        <h4>🔧 Upload Issues:</h4>
+                        <ul>
+                            <li>Check file size (should be under 10MB)</li>
+                            <li>Verify Supabase credentials are correct</li>
+                            <li>Check if Supabase bucket exists and has proper permissions</li>
+                            <li>Ensure backend can connect to Supabase</li>
+                        </ul>
+                    `;
+                    break;
+                case 'network':
+                    fixes = `
+                        <h4>🔧 Network Issues:</h4>
+                        <ul>
+                            <li>Check your internet connection</li>
+                            <li>Verify the backend URL is accessible</li>
+                            <li>Try accessing the backend URL directly in browser</li>
+                            <li>Check if there are any firewall restrictions</li>
+                        </ul>
+                    `;
+                    break;
+            }
+
+            fixesDiv.innerHTML = fixes;
+        }
+
+        // Auto-populate with common backend URLs
+        window.onload = function() {
+            const commonUrls = [
+                'https://resumind-backend.onrender.com',
+                'https://resumind-backend.railway.app',
+                'https://your-backend-url.onrender.com'
+            ];
+            
+            const urlInput = document.getElementById('backendUrl');
+            urlInput.placeholder = commonUrls[0];
+            
+            log('🔧 Diagnostic tool loaded. Please enter your backend URL and run tests.', 'info');
+        };
+    </script>
+</body>
+</html>
